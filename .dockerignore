@@ -1,0 +1,16 @@
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.env
+.DS_Store
+.git
+.gitignore
+docker-compose.yml
+Dockerfile
+# Ignore local static directory if exists, as we read from OSS
+static/
+media/

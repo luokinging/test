@@ -1,0 +1,39 @@
+[project]
+name = "web-app"
+version = "0.1.0"
+description = "Web Server"
+requires-python = ">=3.11"
+readme = "README.md"
+dependencies = [
+    "django>=5.0",
+    "mysqlclient",
+    "redis",
+    "celery",
+    "djangorestframework",
+    "markdown",
+    "django-filter",
+    "gunicorn",
+    "django-storages",
+    "boto3",
+    "django-redis",
+    "django-celery-beat",
+    "alibabacloud-oss-v2"
+]
+
+
+[tool.ruff.lint.per-file-ignores]
+
+"app/settings/*.py" = ["F403", "F405"]
+
+[dependency-groups]
+dev = [
+    "django-migration-linter>=5.1.0",
+    "ruff>=0.14.14",
+    "pytest>=8.0",
+    "pytest-django>=4.5",
+]
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "app.settings.local"
+python_files = ["test_*.py", "*_test.py"]
+

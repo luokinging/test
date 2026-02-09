@@ -1,0 +1,35 @@
+# File path: .github/actions/setup-aliyun/action.yml
+name: 'Setup Aliyun CLI'
+description: 'Install and configure Aliyun CLI'
+inputs:
+  region:
+    description: 'Aliyun Region ID'
+    required: true
+  access-key-id:
+    description: 'Aliyun Access Key ID'
+    required: true
+  access-key-secret:
+    description: 'Aliyun Access Key Secret'
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Install Aliyun CLI
+      shell: bash
+      run: |
+        curl -L -o aliyun-cli.tgz https://aliyuncli.alicdn.com/aliyun-cli-linux-latest-amd64.tgz
+        tar -zxvf aliyun-cli.tgz
+        sudo mv aliyun /usr/local/bin/
+        
+        # Configure authentication
+        aliyun configure set \
+          --profile default \
+          --mode AK \
+          --region ${{ inputs.region }} \
+          --access-key-id ${{ inputs.access-key-id }} \
+          --access-key-secret ${{ inputs.access-key-secret }}
+          
+    - name: Verify Installation
+      shell: bash
+      run: aliyun version

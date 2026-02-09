@@ -1,0 +1,35 @@
+name: PR Check
+
+# Trigger: Runs on PRs targeting main/production branch
+on:
+  pull_request:
+    branches:
+      - main
+      - production
+
+# Prevent concurrent runs
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Ruff Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Ruff
+        run: pip install ruff
+
+      - name: Run Ruff
+        run: ruff check .
+
+      - name: Run Ruff format check
+        run: ruff format --check .

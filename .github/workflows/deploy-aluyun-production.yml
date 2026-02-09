@@ -1,0 +1,135 @@
+name: Aliyun Deployment
+
+on:
+  push:
+    branches:
+      - production
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+  packages: write
+
+env:
+  REGION_ID: "cn-hangzhou"
+  IMAGE_NAME: "webserver"
+
+  # Application IDs (Web / Worker / Beat)
+  SAE_APP_ID_WEB: "9bfbb8df-99fd-4ba8-b5ad-accf0459ac6e"
+  SAE_APP_ID_WORKER: "2bc6937e-2b59-4135-af90-c2cb8c206efd"
+  SAE_APP_ID_BEAT: "d28a493a-080a-4c6c-8f20-bc4960e334e3"
+
+  # Job IDs (Migrate / Static)
+  SAE_JOB_ID_MIGRATE: "c80d89c0-3392-41c7-8e51-b16e8d28ac30"
+  SAE_JOB_ID_COLLECT_STATIC: "63add102-aa6f-4a57-9f2b-c47099d5872e"
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Login to Docker Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ secrets.ALIYUN_REGISTRY }}
+          username: ${{ secrets.ALIYUN_REGISTRY_USER }}
+          password: ${{ secrets.ALIYUN_REGISTRY_PWD }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and Push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ secrets.ALIYUN_REGISTRY }}/${{ secrets.ALIYUN_NAMESPACE }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+            ${{ secrets.ALIYUN_REGISTRY }}/${{ secrets.ALIYUN_NAMESPACE }}/${{ env.IMAGE_NAME }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  db-migrate:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Aliyun CLI
+        uses: ./.github/actions/setup-aliyun
+        with:
+          region: ${{ env.REGION_ID }}
+          access-key-id: ${{ secrets.ALIYUN_AK }}
+          access-key-secret: ${{ secrets.ALIYUN_SK }}
+
+      - name: Run Migration Job
+        env:
+          TARGET_IMAGE: ${{ secrets.ALIYUN_REGISTRY }}/${{ secrets.ALIYUN_NAMESPACE }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+        run: |
+          chmod +x .github/scripts/sae-update-and-exec-job.sh
+          .github/scripts/sae-update-and-exec-job.sh \
+            "${{ env.SAE_JOB_ID_MIGRATE }}" \
+            "$TARGET_IMAGE" \
+            "Migration Job"
+
+  static-collect:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Aliyun CLI
+        uses: ./.github/actions/setup-aliyun
+        with:
+          region: ${{ env.REGION_ID }}
+          access-key-id: ${{ secrets.ALIYUN_AK }}
+          access-key-secret: ${{ secrets.ALIYUN_SK }}
+
+      - name: Run Static Collection Job
+        env:
+          TARGET_IMAGE: ${{ secrets.ALIYUN_REGISTRY }}/${{ secrets.ALIYUN_NAMESPACE }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+        run: |
+          chmod +x .github/scripts/sae-update-and-exec-job.sh
+          .github/scripts/sae-update-and-exec-job.sh \
+            "${{ env.SAE_JOB_ID_COLLECT_STATIC }}" \
+            "$TARGET_IMAGE" \
+            "Static Collection Job"
+
+  deploy-services:
+    needs: [build-and-push, db-migrate, static-collect]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Aliyun CLI
+        uses: ./.github/actions/setup-aliyun
+        with:
+          region: ${{ env.REGION_ID }}
+          access-key-id: ${{ secrets.ALIYUN_AK }}
+          access-key-secret: ${{ secrets.ALIYUN_SK }}
+
+      - name: Deploy Web, Worker and Beat
+        env:
+          FULL_IMAGE_URL: ${{ secrets.ALIYUN_REGISTRY }}/${{ secrets.ALIYUN_NAMESPACE }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+        run: |
+          echo "🚀 1. Deploying Web App (Full Release)..."
+          aliyun sae DeployApplication \
+            --AppId ${{ env.SAE_APP_ID_WEB }} \
+            --ImageUrl "$FULL_IMAGE_URL"
+
+          echo "🚀 2. Deploying Celery Worker..."
+          aliyun sae DeployApplication \
+            --AppId ${{ env.SAE_APP_ID_WORKER }} \
+            --ImageUrl "$FULL_IMAGE_URL"
+
+          echo "🚀 3. Deploying Celery Beat..."
+          aliyun sae DeployApplication \
+            --AppId ${{ env.SAE_APP_ID_BEAT }} \
+            --ImageUrl "$FULL_IMAGE_URL"

@@ -1,0 +1,143 @@
+name: Release
+
+# Trigger: Runs when code lands on the main branch
+on:
+  push:
+    branches:
+      - main
+
+# Prevent concurrent runs to avoid race conditions
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: true
+
+jobs:
+  productionPromotion:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Generate PR Content
+        id: vars
+        run: |
+          # Set timezone to Shanghai for accurate timestamps
+          now=$(TZ="Asia/Shanghai" date +'%Y-%m-%d %H:%M')
+          
+          # 1. Fresh, lively titles
+          titles=(
+            "📦 Special Delivery! Sync to Production" 
+            "🔥 Hot off the press! Deploy Request" 
+            "✨ Magic Moment: Main -> Prod" 
+            "🚚 The Code Train is Arriving!" 
+            "🎁 Unwrapping New Features" 
+            "⚡️ Supercharge Production"
+            "🚢 Ship It! Release Candidate"
+          )
+
+          # 2. Engaging body introductions
+          intros=(
+            "**Knock knock!** Who's there? It's the latest code from \`main\` waiting to go live! 🚪"
+            "The \`main\` branch has evolved. It's time to upgrade production! 🧬"
+            "Fresh code, fresh bugs... just kidding! (Hopefully). Here is the latest build. 🤞"
+            "Your users are waiting for this. Let's not keep them waiting! ⏱️"
+            "Another day, another deployment. Let's make this one count! 🌟"
+          )
+
+          # 3. Developer wisdom/jokes (New copy)
+          tips=(
+            "Hydrate while you migrate. 💧"
+            "Sleep is the best debugger, but logs are a close second. 💤"
+            "If it isn't tested, it's broken. 📉"
+            "Delete code is better than write code. 🗑️"
+            "Commit early, commit often, but don't commit crimes. 🚔"
+            "A user interface is like a joke. If you have to explain it, it’s not that good. 🎨"
+            "Remember: 'It works on my machine' is not a valid certificate. 📜"
+          )
+
+          # Select random elements
+          selected_title="${titles[$RANDOM % ${#titles[@]}]} @ $now"
+          selected_intro="${intros[$RANDOM % ${#intros[@]}]}"
+          selected_tip="${tips[$RANDOM % ${#tips[@]}]}"
+
+          # Construct the PR Body with a CRITICAL DB CHECK section
+          # Using EOF for cleaner multi-line string construction
+          pr_body=$(cat <<EOF
+          ## 🤖 Auto-Generated Release Request
+
+          $selected_intro
+
+          ---
+
+          ### 🛑 PRE-FLIGHT DB CHECK (Crucial!)
+          **Does this release contain database schema changes (migrations)?**
+
+          - [ ] **NO**: Safe to merge.
+          - [ ] **YES**: ⚠️ **STOP!** Have you followed the safe expansion strategy?
+            1. Ensure new columns are \`nullable\`.
+            2. Don't rename columns directly (Dual-write first).
+            3. Check if the \`db-migrate\` job will lock the table.
+
+          *(Please check the \`migrations/\` folder in the file changes tab)*
+
+          ---
+
+          👇 **Action Required**
+          Merge this PR to trigger the **Aliyun SAE Deployment** pipeline.
+
+          💡 **Random Wisdom:** $selected_tip
+          EOF
+          )
+
+          # Output variables to GitHub Actions environment
+          echo "pr_title=$selected_title" >> $GITHUB_OUTPUT
+          
+          # Handle multi-line body safely
+          echo "pr_body<<MULTI_LINE_ENV" >> $GITHUB_OUTPUT
+          echo "$pr_body" >> $GITHUB_OUTPUT
+          echo "MULTI_LINE_ENV" >> $GITHUB_OUTPUT
+
+      - name: Create or Update Pull Request
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const head = "main"; // Source branch
+            const base = "production"; // Target branch
+            
+            // Get variables from the previous step
+            const title = process.env.PR_TITLE; 
+            const body = process.env.PR_BODY;
+
+            // Check if an open PR already exists
+            const { data: pulls } = await github.rest.pulls.list({
+              owner,
+              repo,
+              head: `${owner}:${head}`,
+              base,
+              state: "open",
+            });
+
+            if (pulls.length > 0) {
+              // UPDATE existing PR
+              await github.rest.pulls.update({
+                owner,
+                repo,
+                pull_number: pulls[0].number,
+                title,
+                body, // Updates the body to include the latest tip/warning
+              });
+              core.info(`✅ Updated existing PR #${pulls[0].number}`);
+            } else {
+              // CREATE new PR
+              const { data: pr } = await github.rest.pulls.create({
+                owner,
+                repo,
+                head,
+                base,
+                title,
+                body,
+              });
+              core.info(`🚀 Created new PR #${pr.number}`);
+            }
+        env:
+          PR_TITLE: ${{ steps.vars.outputs.pr_title }}
+          PR_BODY: ${{ steps.vars.outputs.pr_body }}
