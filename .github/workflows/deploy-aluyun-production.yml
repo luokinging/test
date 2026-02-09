@@ -17,13 +17,13 @@ env:
   IMAGE_NAME: "webserver"
 
   # Application IDs (Web / Worker / Beat)
-  SAE_APP_ID_WEB: "9bfbb8df-99fd-4ba8-b5ad-accf0459ac6e"
-  SAE_APP_ID_WORKER: "2bc6937e-2b59-4135-af90-c2cb8c206efd"
-  SAE_APP_ID_BEAT: "d28a493a-080a-4c6c-8f20-bc4960e334e3"
+  SAE_APP_ID_WEB: "3e94a604-0dfd-450a-bb82-61c34a647e82"
+  SAE_APP_ID_WORKER: "6784e748-8402-455a-b7bb-c93ea716cd6c"
+  SAE_APP_ID_BEAT: "e2522dac-191b-41ea-a9da-db069cb7f25b"
 
   # Job IDs (Migrate / Static)
-  SAE_JOB_ID_MIGRATE: "c80d89c0-3392-41c7-8e51-b16e8d28ac30"
-  SAE_JOB_ID_COLLECT_STATIC: "63add102-aa6f-4a57-9f2b-c47099d5872e"
+  SAE_JOB_ID_MIGRATE: "ebc48e2b-06e6-41b3-a76f-29e5642647e0"
+  SAE_JOB_ID_COLLECT_STATIC: "1cd9998d-9017-49e0-ac31-0c63daf8fb86"
 
 jobs:
   build-and-push:
