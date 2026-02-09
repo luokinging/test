@@ -17,9 +17,9 @@ env:
   IMAGE_NAME: "webserver"
 
   # Application IDs (Web / Worker / Beat)
-  SAE_APP_ID_WEB: "3e94a604-0dfd-450a-bb82-61c34a647e82"
-  SAE_APP_ID_WORKER: "6784e748-8402-455a-b7bb-c93ea716cd6c"
-  SAE_APP_ID_BEAT: "e2522dac-191b-41ea-a9da-db069cb7f25b"
+  SAE_APP_ID_WEB: "a91b4b63-0f52-46e8-9747-f19fc6759305"
+  SAE_APP_ID_WORKER: "0bed6229-5600-47de-a68c-b2eba8a0059f"
+  SAE_APP_ID_BEAT: "35870bff-4f60-443d-9665-3aef00cda4de"
 
   # Job IDs (Migrate / Static)
   SAE_JOB_ID_MIGRATE: "ebc48e2b-06e6-41b3-a76f-29e5642647e0"
