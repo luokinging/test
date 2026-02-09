@@ -40,6 +40,6 @@ STORAGES = {
     },
     "staticfiles": {
         "BACKEND": "app.storage.aliyun.AliyunOSSV2Storage",
-        "OPTIONS": {**ALIYUN_OSS_CONFIG, "prefix": "static"},
+        "OPTIONS": {**ALIYUN_OSS_CONFIG, "prefix": "django_static"},
     },
 }
